@@ -50,7 +50,7 @@ public class proyecto_2 {
 	}
 	
 	public void lexer() {
-		String cadena = "(defvar hl 3)(if (can-move? :north) (face :north) (pick balloons 2) )";
+		String cadena = "(defvar hl 3)(if (not(can-put? balloons 2)) (face :north) (pick balloons 2) )";
 		String cadenaConEspacios = cadena.replaceAll("([()])", " $1 ");
 		System.out.println(cadenaConEspacios);
 		token = cadenaConEspacios.split("\\s+");
@@ -146,6 +146,36 @@ public class proyecto_2 {
 					|| token[n+1].compareTo(":west") ==  0|| token[n+1].compareTo(":east") ==  0) {
 				n += 1;
 				return true;
+			}
+		}else if((token[n].compareTo("facing?") == 0 && token[n+2].compareTo(")") == 0)) {
+			if(token[n+1].compareTo(":north") ==  0|| token[n+1].compareTo(":south") ==  0
+					|| token[n+1].compareTo(":west") ==  0|| token[n+1].compareTo(":east") ==  0) {
+				n += 1;
+				return true;
+			}
+		}else if((token[n].compareTo("can-put?") == 0 && token[n+3].compareTo(")") == 0)) {
+			if(token[n+1].compareTo("balloons") ==  0|| token[n+1].compareTo("chips") ==  0) {
+				if(Integer.valueOf(token[n + 2]) >= 0) {
+					n = n+2;
+					return true;
+				}
+			}
+		} else if((token[n].compareTo("can-pick?") == 0 && token[n+3].compareTo(")") == 0)) {
+			if(token[n+1].compareTo("balloons") ==  0|| token[n+1].compareTo("chips") ==  0) {
+				if(Integer.valueOf(token[n + 2]) >= 0) {
+					n = n+2;
+					return true;
+				}
+			}
+		} else if((token[n].compareTo("blocked?") == 0 && token[n+1].compareTo(")") == 0)) {
+			return true;
+		} else if(token[n].compareTo("not") == 0 && token[n+1].compareTo("(") == 0) {
+			n += 2;
+			if (validateConditions()) {
+				if(token[n+2].compareTo(")") == 0) {
+					n = n+1;
+					return true;
+				}		
 			}
 		}
 		return false;
