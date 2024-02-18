@@ -16,6 +16,7 @@ public class proyecto_2 {
 	boolean isVariableName;
 	boolean isCondition;
 	boolean isCommand;
+	boolean isBlock;
 	List<String> conditions;
 	
 	public proyecto_2(){
@@ -27,6 +28,7 @@ public class proyecto_2 {
 		isVariableName = false;
 		isCondition = false;
 		isCommand = false;
+		isBlock = false;
 		conditions = new ArrayList<String>( );
 		conditions.add("can-move?");
 	}
@@ -50,19 +52,43 @@ public class proyecto_2 {
 	}
 	
 	public void lexer() {
-		String cadena = "(defvar hl 3)(if (not(can-put? balloons 2)) (face :north) (pick balloons 2) )";
+		String cadena = "(defvar hl 3) (if (can-move? :north)(move 3))((if (can-move? :north)(move 3))) (move 3)";
+		cadena = cadena.concat(".");
 		String cadenaConEspacios = cadena.replaceAll("([()])", " $1 ");
 		System.out.println(cadenaConEspacios);
 		token = cadenaConEspacios.split("\\s+");
 		for (; this.n<token.length; n++){
 			System.out.println(token[n]);
-	        if(token[n].compareTo("(") == 0 && openProcess == false)
-	        	openProcess = true;
+	        if(token[n].compareTo("(") == 0 && openProcess == false) {
+	        	if(!validateCommand())
+	        		openProcess = true;
+	        	else
+	        		System.out.println("se valido el comando");
+	        }
 	        if(token[n].compareTo("defvar") == 0 && openProcess == true) {
 	        	validateVariableFormat();	
 	        }
-	        if((token[n].compareTo("if")== 0 && openProcess == true) || isCondition == true || isCommand == true) {
+	        if((token[n].compareTo("if")== 0 && openProcess == true || token[n].compareTo("if")== 0 && isBlock == true) || isCondition == true || isCommand == true) {
 	        	validateConditionalSyntax();
+	        }
+	        if(token[n].compareTo("(") == 0 && openProcess == true && isCommand == false && isCondition == false && token[n+1].compareTo("(") == 0) {
+	        	System.out.println("abriendo el bloque");
+	        	isBlock = true;
+	        		
+	        }
+	        if((token[n].compareTo(")") == 0) && openProcess == true && isBlock == true && isCommand == false && isCondition == false && token[n + 1].compareTo("(") != 0) {
+	        	isBlock = false;
+	        	openProcess = false;
+	        	System.out.println("cerrando el bloque");
+	        }
+	        else if(token[n].compareTo("(") == 0 && openProcess == true && isCommand == false && isBlock == true && isCondition == false && token[n+1].compareTo("(") != 0 
+	        		&& token[n+1].compareTo("if") != 0 && token[n+1].compareTo("defvar") != 0) {
+	        	if(validateCommand()) {
+	        		System.out.println("se verifico los comandos dentro del bloque");
+	        		isCommand = false;
+	        	} else {
+	        		System.out.println("los comandos dentro del bloque son erroneos");
+	        	}
 	        }
 	        
 	    }
@@ -99,9 +125,16 @@ public class proyecto_2 {
 					System.out.println(n);
 					if(token[n + 1].compareTo("(") != 0) {
 						if(token[n + 1].compareTo(")") == 0) {
-							openProcess = false;
-							isCommand = false;
-							System.out.println("se cierra los comandos y la condicion");
+							if (isBlock == false) {
+								openProcess = false;
+								isCommand = false;
+								System.out.println("se cierra los comandos y la condicion");
+								n ++;
+							} else {
+								isCommand = false;
+								System.out.println("se cierra los comandos y la condicion pero no el bloque");
+								n++;
+							}
 						}
 					} else if(token[n + 1].compareTo("(") == 0){
 						isCommand = true;
@@ -234,12 +267,6 @@ public class proyecto_2 {
 					n = n+3;
 					return true;
 				}
-			}else if(token[n+1].compareTo("run-dirs") == 0) {
-				if(token[n+2].compareTo(":left") ==  0|| token[n+2].compareTo(":right") ==  0
-						|| token[n+2].compareTo(":around") ==  0 || token[n+2].compareTo(":front") ==  0) {
-					n = n+3;
-					return true;
-				}
 			}else if(token[n+1].compareTo("move") == 0) {
 				if(Integer.valueOf(token[n + 2]) >= 0) {
 					n = n+3;
@@ -251,7 +278,23 @@ public class proyecto_2 {
 					return true;
 				}
 			}
-		} else if(token[n+2].compareTo(")") == 0) {
+		
+		} 
+		else if(token[n+1].compareTo("run-dirs") == 0) {
+			n++;
+			for(; this.n<token.length; n++){
+				if(token[n+1].compareTo(":left") ==  0|| token[n+1].compareTo(":right") ==  0
+						|| token[n+1].compareTo(":back") ==  0 || token[n+1].compareTo(":front") ==  0);
+				else
+					break;				
+			}
+			if (token[n+1].compareTo(")") == 0) {
+				n++;
+				return true;
+			} else
+				return false;
+				
+		}else if(token[n+2].compareTo(")") == 0) {
 			System.out.println("v");
 			if(token[n+1].compareTo("null") == 0) {
 				System.out.println("null");
