@@ -1,0 +1,1 @@
+(defvar hl 3) (if (can-move? :north)(move 3))((if (can-move? :north)(move 3))) (move 3)

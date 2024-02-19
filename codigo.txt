@@ -1,0 +1,14 @@
+( defvar rotate 3)
+( repeat Spaces ( if (not ( blocked? ) ) (put :chips 1) ) )
+
+( defvar pepe 3)
+
+( if (can-move? :north ) ( move-dir pepe :front ) )
+(
+( if (not (blocked?) ) ( null) )
+( turn :left )
+)
+
+( defvar one 1)
+( run-dirs :left :front :left :back :right )
+( if (can-move? :north ) ( move-dir pepe :front ) )

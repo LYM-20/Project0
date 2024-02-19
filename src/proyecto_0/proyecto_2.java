@@ -1,6 +1,9 @@
 package proyecto_0;
 
 import java.util.regex.Pattern;
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileReader;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
@@ -11,17 +14,22 @@ public class proyecto_2 {
 	private String[] token;
 	int n;
 	List<String[]> variables;
+	List<String> constants;
 	boolean isVariable;
 	boolean openProcess;
 	boolean isVariableName;
 	boolean isCondition;
 	boolean isCommand;
 	boolean isBlock;
-	List<String> conditions;
+	boolean loop;
+	int estado;
+	String txt;
 	
 	public proyecto_2(){
 		token = new String[] {};
 		variables = new ArrayList<String[]>( );
+		constants = new ArrayList<String>( );
+		txt = "";
 		n = 0;
 		isVariable = false;
 		openProcess = false;
@@ -29,46 +37,56 @@ public class proyecto_2 {
 		isCondition = false;
 		isCommand = false;
 		isBlock = false;
-		conditions = new ArrayList<String>( );
-		conditions.add("can-move?");
+		estado = 0;
+		addConstants();
 	}
 	
-	public boolean execute() {
-		
-		String cadena = "defun foo (c p)";
+	public void addConstants() {
+		constants.add("Dim");
+		constants.add("myXpos");
+		constants.add("myYpos");
+		constants.add("myChips");
+		constants.add("myBalloons");
+		constants.add("balloonsHere");
+		constants.add("ChipsHere");
+		constants.add("Spaces");
+	}
+	
+	public void readArchive(String fileName) throws Exception {
+		File file = new File(
+	            fileName);
+		BufferedReader br = new BufferedReader(new FileReader(file));
 
-		String formatoDeseadoClase = "defvar\\s+\\w+\\s+\\d+";
-		String formatoDeseadoMetodo = "defun\\s+\\w+\\s+\\(.*\\)";
-		
-		Pattern formatoClase = Pattern.compile(formatoDeseadoClase);
-		Pattern formatoMetodo = Pattern.compile(formatoDeseadoMetodo);
-		Matcher cumple = formatoMetodo.matcher(cadena);
-		if (cumple.matches())
-			System.out.println("La cadena cumple");
-		else
-			System.out.println("La cadena no cumple");
-		
-		return false;
+	    String st;
+	    while ((st = br.readLine()) != null) {
+	    	System.out.println(st);
+	    	txt = txt.concat(st);
+	    }
+	    System.out.println(txt);
+
 	}
 	
-	public void lexer() {
-		String cadena = "(defvar hl 3) (if (can-move? :north)(move 3))((if (can-move? :north)(move 3))) (move 3)";
-		cadena = cadena.concat(".");
-		String cadenaConEspacios = cadena.replaceAll("([()])", " $1 ");
+	public void lexer() throws Exception{
+		txt = txt.concat(".");
+		String cadenaConEspacios = txt.replaceAll("([()])", " $1 ");
 		System.out.println(cadenaConEspacios);
 		token = cadenaConEspacios.split("\\s+");
 		for (; this.n<token.length; n++){
 			System.out.println(token[n]);
 	        if(token[n].compareTo("(") == 0 && openProcess == false) {
-	        	if(!validateCommand())
+	        	if(!validateCommand() && !validateLoop())
 	        		openProcess = true;
 	        	else
 	        		System.out.println("se valido el comando");
 	        }
+	        if(estado == 1) {
+	        	System.out.println("la syntax es incorrecta");
+	        	break;	
+	        }
 	        if(token[n].compareTo("defvar") == 0 && openProcess == true) {
 	        	validateVariableFormat();	
 	        }
-	        if((token[n].compareTo("if")== 0 && openProcess == true || token[n].compareTo("if")== 0 && isBlock == true) || isCondition == true || isCommand == true) {
+	        if((token[n].compareTo("if")== 0 && openProcess == true || token[n].compareTo("if")== 0 && isBlock == true) || isCondition == true || isCommand == true ) {
 	        	validateConditionalSyntax();
 	        }
 	        if(token[n].compareTo("(") == 0 && openProcess == true && isCommand == false && isCondition == false && token[n+1].compareTo("(") == 0) {
@@ -76,7 +94,7 @@ public class proyecto_2 {
 	        	isBlock = true;
 	        		
 	        }
-	        if((token[n].compareTo(")") == 0) && openProcess == true && isBlock == true && isCommand == false && isCondition == false && token[n + 1].compareTo("(") != 0) {
+	        if((token[n].compareTo(")") == 0) && openProcess == true && isBlock == true && isCommand == false && isCondition == false) {
 	        	isBlock = false;
 	        	openProcess = false;
 	        	System.out.println("cerrando el bloque");
@@ -88,10 +106,27 @@ public class proyecto_2 {
 	        		isCommand = false;
 	        	} else {
 	        		System.out.println("los comandos dentro del bloque son erroneos");
+	        		estado = 1;
 	        	}
 	        }
 	        
 	    }
+	}
+	public boolean validateLoop() {
+		if(token[n+1].compareTo("repeat") == 0 && (constants.contains(token[n+2]) || token[n+2].matches("-?\\d+") || token[n+2].compareTo("Spaces") == 0)) {
+			n = n+3;
+			if (token[n].compareTo("(") == 0 && token[n + 1].compareTo("if") == 0) {
+				n = n+1;
+				openProcess = true;
+				System.out.println("empiezan las condicionales dentro del loop");
+				System.out.println(token[n]);
+				
+			}
+			else {
+				estado = 1;
+			}
+		}
+		return false;
 	}
 	public void validateConditionalSyntax() {
 		if(token[n + 1].compareTo("(") == 0 && isCondition == false && token[n].compareTo("if") == 0 && isCommand == false)
@@ -100,6 +135,7 @@ public class proyecto_2 {
 			if (token[n-1].compareTo("(") == 0) {
 				if (!validateConditions()) {
 					isCondition = false;
+					estado = 1;
 					System.out.println("no cumple la condicion");
 				}
 			} else if (token[n].compareTo(")") == 0) {
@@ -110,6 +146,7 @@ public class proyecto_2 {
 						System.out.println("se cierra la condicion");
 					} else {
 						isCondition = false;
+						estado = 1;
 						System.out.println("no cumple la condicion");
 					}
 				} else if(token[n + 1].compareTo("(") == 0){
@@ -140,34 +177,37 @@ public class proyecto_2 {
 						isCommand = true;
 					}
 				} else {
+					estado = 1;
 					System.out.println("la syntax es incorrecta");
 				}
 			}
 		}
 		else {
+			estado = 1;
 			System.out.println("no cumple la condicion");
 		} 
 	}
 	
 	public void validateVariableFormat() {
-		String[] tokenVariable = new String[2];
 		if(isVariableName == false) {
-			tokenVariable[0] = token[n + 1];
+			constants.add(token[n + 1]);
 			isVariableName = true;
 		}
 		if(isVariableName == true) {
-			if(Integer.valueOf(token[n + 2]) >= 0) {
-				tokenVariable[1] = token[n + 2];
-				variables.add(tokenVariable);
+			if(token[n+2].matches("-?\\d+") || constants.contains(token[n+2])) {
 				if(token[n+3].compareTo(")") == 0) {
 					isVariableName = false;
 					openProcess = false;
 					n = n+3;
 					System.out.println("se valido el formato correctamente");
-				} else
+				} else {
+					estado = 1;
 					System.out.println("no cumple con el formato");
-			}else
+				}
+			}else {
 				System.out.println("no cumple con el formato");
+				estado = 1;
+			}
 			
 		}
 	}
@@ -187,15 +227,15 @@ public class proyecto_2 {
 				return true;
 			}
 		}else if((token[n].compareTo("can-put?") == 0 && token[n+3].compareTo(")") == 0)) {
-			if(token[n+1].compareTo("balloons") ==  0|| token[n+1].compareTo("chips") ==  0) {
-				if(Integer.valueOf(token[n + 2]) >= 0) {
+			if(token[n+1].compareTo(":balloons") ==  0|| token[n+1].compareTo(":chips") ==  0) {
+				if(token[n+2].matches("-?\\d+") || constants.contains(token[n+2])) {
 					n = n+2;
 					return true;
 				}
 			}
 		} else if((token[n].compareTo("can-pick?") == 0 && token[n+3].compareTo(")") == 0)) {
-			if(token[n+1].compareTo("balloons") ==  0|| token[n+1].compareTo("chips") ==  0) {
-				if(Integer.valueOf(token[n + 2]) >= 0) {
+			if(token[n+1].compareTo(":balloons") ==  0|| token[n+1].compareTo(":chips") ==  0) {
+				if(token[n+2].matches("-?\\d+") || constants.contains(token[n+2])) {
 					n = n+2;
 					return true;
 				}
@@ -218,23 +258,23 @@ public class proyecto_2 {
 		System.out.println(n);
 		if(token[n+4].compareTo(")") == 0 && token[n+3].compareTo(")") != 0) {
 			if(token[n+1].compareTo("put") == 0) {
-				if(token[n+2].compareTo("balloons") ==  0|| token[n+2].compareTo("chips") ==  0) {
-					if(Integer.valueOf(token[n + 3]) >= 0) {
+				if(token[n+2].compareTo(":balloons") ==  0|| token[n+2].compareTo(":chips") ==  0) {
+					if(token[n+3].matches("-?\\d+") || constants.contains(token[n+3])) {
 						n = n+4;
 						return true;
 					}
 				}
 			}
 			else if(token[n+1].compareTo("pick") == 0) {
-				if(token[n+2].compareTo("balloons") ==  0|| token[n+2].compareTo("chips") ==  0) {
-					if(Integer.valueOf(token[n + 3]) >= 0) {
+				if(token[n+2].compareTo(":balloons") ==  0|| token[n+2].compareTo(":chips") ==  0) {
+					if(token[n+3].matches("-?\\d+") || constants.contains(token[n+3])) {
 						n = n+4;
 						return true;
 					}
 				}
 			}
 			else if(token[n+1].compareTo("move-face") == 0) {
-				if(Integer.valueOf(token[n + 2]) >= 0) {
+				if(token[n+2].matches("-?\\d+") || constants.contains(token[n+2])) {
 					if(token[n+3].compareTo(":north") ==  0|| token[n+3].compareTo(":south") ==  0
 							|| token[n+3].compareTo(":west") ==  0|| token[n+3].compareTo(":east") ==  0) {
 						n = n+4;
@@ -243,7 +283,7 @@ public class proyecto_2 {
 				}
 			}
 			else if(token[n+1].compareTo("move-dir") == 0) {
-				if(Integer.valueOf(token[n + 2]) >= 0) {
+				if(token[n+2].matches("-?\\d+") || constants.contains(token[n+2])) {
 					if(token[n+3].compareTo(":front") ==  0|| token[n+3].compareTo(":right") ==  0
 							|| token[n+3].compareTo(":left") ==  0|| token[n+3].compareTo(":back") ==  0) {
 						n = n+4;
@@ -260,20 +300,18 @@ public class proyecto_2 {
 					return true;
 				}
 			} else if(token[n+1].compareTo("face") == 0) {
-				System.out.println("validando");
 				if(token[n+2].compareTo(":north") ==  0|| token[n+2].compareTo(":south") ==  0
 						|| token[n+2].compareTo(":west") ==  0|| token[n+2].compareTo(":east") ==  0) {
-					System.out.println("validado");
 					n = n+3;
 					return true;
 				}
 			}else if(token[n+1].compareTo("move") == 0) {
-				if(Integer.valueOf(token[n + 2]) >= 0) {
+				if(token[n+2].matches("-?\\d+") || constants.contains(token[n+2])) {
 					n = n+3;
 					return true;
 				}
 			}else if(token[n+1].compareTo("skip") == 0) {
-				if(Integer.valueOf(token[n + 2]) >= 0) {
+				if(Integer.valueOf(token[n + 2]) >= 0 || constants.contains(token[n+2])) {
 					n = n+3;
 					return true;
 				}
@@ -295,9 +333,7 @@ public class proyecto_2 {
 				return false;
 				
 		}else if(token[n+2].compareTo(")") == 0) {
-			System.out.println("v");
-			if(token[n+1].compareTo("null") == 0) {
-				System.out.println("null");
+			if(token[n+1].equals("null")) {
 				n = n + 2;
 				return true;
 			}
